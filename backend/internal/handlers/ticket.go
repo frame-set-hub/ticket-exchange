@@ -107,3 +107,58 @@ func GetTicketByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ticket)
 }
+
+func GetMyTickets(c *gin.Context) {
+	sellerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var tickets []models.Ticket
+	if err := database.DB.Where("seller_id = ?", sellerID).Find(&tickets).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch your tickets"})
+		return
+	}
+
+	c.JSON(http.StatusOK, tickets)
+}
+
+func DeleteTicket(c *gin.Context) {
+	sellerID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		return
+	}
+
+	var ticket models.Ticket
+	if err := database.DB.First(&ticket, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		return
+	}
+
+	if ticket.SellerID != uint(sellerID.(float64)) { // Ensure user owns ticket
+		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own tickets"})
+		return
+	}
+
+	if ticket.Status != models.TicketAvailable {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Cannot delete a ticket that is already in escrow"})
+		return
+	}
+
+	// Soft delete
+	if err := database.DB.Delete(&ticket).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete ticket"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Ticket deleted successfully"})
+}

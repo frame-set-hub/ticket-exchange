@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import AdminDashboard from './pages/AdminDashboard';
 import Transaction from './pages/Transaction';
+import MyTickets from './pages/MyTickets';
 
 // Layout shell component with Navbar
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -19,9 +20,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">Escrow POC</span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+            <a href="/" className="text-slate-300 hover:text-white transition-colors">Marketplace</a>
+            {user && <a href="/my-tickets" className="text-slate-300 hover:text-white transition-colors">My Tickets</a>}
+            {user?.role === 'Admin' && <a href="/admin" className="text-slate-300 hover:text-white transition-colors">Dashboard</a>}
+          </div>
+
           {user ? (
-            <>
+            <div className="flex items-center gap-4">
               <div className="text-sm">
                 <span className="text-slate-400">Signed in as </span>
                 <span className="text-white font-medium">{user.username} <span className="opacity-50 text-xs">({user.role})</span></span>
@@ -29,7 +36,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <button onClick={logout} className="text-sm bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors border border-slate-700">
                 Log Out
               </button>
-            </>
+            </div>
           ) : (
             <div className="space-x-3">
               <a href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Log In</a>
@@ -61,6 +68,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
 
         <Route path="/" element={<Layout><ProtectedRoute><Home /></ProtectedRoute></Layout>} />
+        <Route path="/my-tickets" element={<Layout><ProtectedRoute><MyTickets /></ProtectedRoute></Layout>} />
         <Route path="/checkout/:id" element={<Layout><ProtectedRoute><Transaction /></ProtectedRoute></Layout>} />
         <Route path="/admin" element={<Layout><ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute></Layout>} />
       </Routes>

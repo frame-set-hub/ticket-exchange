@@ -39,6 +39,8 @@ func SetupRoutes(r *gin.Engine) {
 	{
 		// Tickets
 		protected.POST("/tickets", handlers.CreateTicket)
+		protected.GET("/tickets/my", handlers.GetMyTickets)
+		protected.DELETE("/tickets/:id", handlers.DeleteTicket)
 
 		// Transactions
 		protected.POST("/transactions/:id", handlers.CreateTransaction)
