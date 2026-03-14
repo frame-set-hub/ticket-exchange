@@ -1,5 +1,6 @@
 import { useMyTickets } from '../features/ticket/hooks/useTickets';
-import { Ticket, Trash2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Ticket, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function MyTickets() {
     const { tickets, loading, deleteTicket } = useMyTickets();
@@ -68,7 +69,13 @@ export default function MyTickets() {
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         ) : (
-                                            <span className="text-xs text-slate-500 italic">Locked in Escrow</span>
+                                            <Link
+                                                to={`/checkout/${t.id}`}
+                                                className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                                Open Escrow
+                                            </Link>
                                         )}
                                     </td>
                                 </tr>

@@ -1,7 +1,6 @@
-import { Message, SendMessageParams } from '../entities/Message';
+import type { Message, SendMessageParams } from '../entities/Message';
 
 export interface IChatRepository {
-  connect(token: string, onMessage: (msg: Message) => void): void;
-  send(params: SendMessageParams): void;
-  disconnect(): void;
+  getMessages(transactionId: number): Promise<Message[]>;
+  sendMessage(transactionId: number, params: SendMessageParams): Promise<Message>;
 }

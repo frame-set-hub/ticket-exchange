@@ -1,6 +1,8 @@
 package gin_server
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -77,6 +79,15 @@ func (s *GinServer) SendMessage(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Broadcast to WebSocket room
+	if s.hub != nil {
+		msgJSON, _ := json.Marshal(result.Message)
+		s.hub.broadcast <- &BroadcastMessage{
+			RoomID: fmt.Sprintf("tx:%d", transactionID),
+			Data:   msgJSON,
+		}
 	}
 
 	c.JSON(http.StatusCreated, result.Message)

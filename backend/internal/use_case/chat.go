@@ -52,6 +52,17 @@ func (u *UseCase) ListMessagesByTransactionID(ctx context.Context, transactionID
 		return nil, errors.New("failed to fetch messages")
 	}
 
+	// Enrich with sender usernames
+	usernameCache := make(map[uint]string)
+	for _, msg := range messages {
+		if _, ok := usernameCache[msg.SenderID]; !ok {
+			if user, err := u.userRepository.FindByID(ctx, msg.SenderID); err == nil {
+				usernameCache[msg.SenderID] = user.Username
+			}
+		}
+		msg.SenderUsername = usernameCache[msg.SenderID]
+	}
+
 	return &ListMessagesByTransactionIDResult{
 		Messages: messages,
 	}, nil

@@ -14,23 +14,19 @@
 
 ---
 
-## Screenshots
+## User Interface
 
-> Add your own screenshots here! Run the app and capture the UI.
+| Marketplace (Admin) | Marketplace (User) |
+|:-------------------:|:------------------:|
+| ![Marketplace Admin](docs/screenshots/marketplace.png) | ![Marketplace User](docs/screenshots/marketplace-user.png) |
 
-| Marketplace | Escrow Transaction | Admin Dashboard |
-|:-----------:|:------------------:|:---------------:|
-| ![Marketplace](docs/screenshots/marketplace.png) | ![Transaction](docs/screenshots/transaction.png) | ![Admin](docs/screenshots/admin.png) |
+| Escrow Chat (WebSocket) | Admin Dashboard |
+|:-----------------------:|:---------------:|
+| ![Escrow Chat](docs/screenshots/escrow-chat.png) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) |
 
-<details>
-<summary>📸 How to add screenshots</summary>
-
-1. Create a `docs/screenshots/` folder
-2. Take screenshots of each page
-3. Save them as `marketplace.png`, `transaction.png`, `admin.png`
-4. They will automatically appear in this table
-
-</details>
+| My Tickets |
+|:----------:|
+| ![My Tickets](docs/screenshots/my-tickets.png) |
 
 ---
 
@@ -59,6 +55,43 @@ sequenceDiagram
     Admin->>Seller: 💰 Release funds
     Note over Buyer,Seller: ❌ Direct Buyer↔Seller chat blocked (prevents off-platform deals)
 ```
+
+---
+
+## Real-Time Chat — WebSocket Architecture
+
+Each escrow transaction has a private chat room. Communication flows through WebSocket for real-time delivery, with REST fallback for message history.
+
+```mermaid
+sequenceDiagram
+    actor User as Buyer / Seller
+    participant FE as React Frontend
+    participant WS as WebSocket Server
+    participant DB as PostgreSQL
+
+    Note over FE,DB: 📡 Connection Phase
+    FE->>WS: GET /api/chat/ws/:tx_id?token=JWT
+    WS->>WS: Validate JWT + check buyer/seller/admin
+    WS-->>FE: 101 Switching Protocols
+    FE->>FE: GET /api/chat/transactions/:tx_id/messages (REST)
+    FE->>FE: Render chat history
+
+    Note over FE,DB: 💬 Real-Time Messaging
+    User->>FE: Type & send message
+    FE->>WS: ws.send({content: "..."})
+    WS->>DB: INSERT INTO message_models
+    WS->>WS: Broadcast to all clients in room
+    WS-->>FE: onmessage → render instantly
+
+    Note over FE,DB: 🔐 Security
+    Note right of WS: Only buyer, seller, and admin<br/>can join the room
+```
+
+**Key Design:**
+- **Hub pattern** — one Hub manages all rooms (`tx:<id>`), rooms are created/destroyed lazily
+- **History via REST** — `GET /api/chat/transactions/:tx_id/messages` loads past messages on page load
+- **New messages via WS** — sent through WebSocket, persisted to DB, then broadcast to all room participants
+- **Auth** — JWT token passed as query param on WS upgrade (browsers can't set headers on WebSocket)
 
 ---
 
@@ -93,11 +126,21 @@ graph LR
 
 ### 1. Database (Docker)
 ```bash
+# Option A: Quick start (hardcoded values)
 docker run --name ticketx-postgres \
   -e POSTGRES_USER=ticketx_user \
   -e POSTGRES_PASSWORD=secret_password \
   -e POSTGRES_DB=ticketx_db \
   -p 5432:5432 -d postgres:alpine
+
+# Option B: Load from .env (recommended — single source of truth)
+cd backend && cp .env.example .env   # edit .env if needed
+source .env
+docker run --name ticketx-postgres \
+  -e POSTGRES_USER=$DB_USER \
+  -e POSTGRES_PASSWORD=$DB_PASSWORD \
+  -e POSTGRES_DB=$DB_NAME \
+  -p $DB_PORT:5432 -d postgres:alpine
 ```
 
 ### 2. Backend
@@ -297,15 +340,17 @@ graph LR
         T2["GET /tickets/my"]
         T3["POST /tickets"]
         T4["DELETE /tickets/:id"]
-        TX1["POST /transactions/:id"]
-        TX2["POST /transactions/:id/upload-payment"]
-        TX3["POST /transactions/:id/upload-ticket"]
-        C1["WS /chat?token=..."]
+        TX1["POST /transactions"]
+        TX2["GET /transactions/my"]
+        TX3["POST /transactions/:id/status"]
+        C1["GET /chat/transactions/:id/messages"]
+        C2["POST /chat/transactions/:id/messages"]
+        C3["🔌 WS /chat/ws/:id?token=JWT"]
     end
 
     subgraph Admin Only
         AD1["GET /admin/transactions"]
-        AD2["POST /admin/transactions/:id/complete"]
+        AD2["POST /admin/transactions/:id/status"]
     end
 
     style Public fill:#065f46,stroke:#10b981,color:#d1fae5

@@ -84,9 +84,7 @@ func (r *pgDb) List(ctx context.Context, params *ListTicketParams) ([]*ticket.Ti
 
 	var tickets []ticketModel
 
-	if err := query.Preload("Seller", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id", "username")
-	}).Find(&tickets).Error; err != nil {
+	if err := query.Find(&tickets).Error; err != nil {
 		return nil, err
 	}
 
@@ -114,11 +112,7 @@ func (r *pgDb) List(ctx context.Context, params *ListTicketParams) ([]*ticket.Ti
 func (r *pgDb) GetByID(ctx context.Context, id int) (*ticket.TicketWithSeller, error) {
 	var ticketModel ticketModel
 
-	err := r.db.WithContext(ctx).
-		Preload("Seller", func(db *gorm.DB) *gorm.DB {
-			return db.Select("id", "username")
-		}).
-		First(&ticketModel, id).Error
+	err := r.db.WithContext(ctx).First(&ticketModel, id).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

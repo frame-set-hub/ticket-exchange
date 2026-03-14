@@ -56,25 +56,28 @@ func (s *GinServer) GetTickets(c *gin.Context) {
 	venue := c.Query("venue")
 	category := c.Query("category")
 
-	var minPrice, maxPrice *float64
+	params := &use_case.ListTicketsParams{}
 	if minPriceStr != "" {
 		if val, err := strconv.ParseFloat(minPriceStr, 64); err == nil {
-			minPrice = &val
+			params.MinPrice = &val
 		}
 	}
 	if maxPriceStr != "" {
 		if val, err := strconv.ParseFloat(maxPriceStr, 64); err == nil {
-			maxPrice = &val
+			params.MaxPrice = &val
 		}
 	}
+	if title != "" {
+		params.Title = &title
+	}
+	if venue != "" {
+		params.Venue = &venue
+	}
+	if category != "" {
+		params.Category = &category
+	}
 
-	result, err := s.useCase.ListTickets(c.Request.Context(), &use_case.ListTicketsParams{
-		MinPrice: minPrice,
-		MaxPrice: maxPrice,
-		Title:    &title,
-		Venue:    &venue,
-		Category: &category,
-	})
+	result, err := s.useCase.ListTickets(c.Request.Context(), params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

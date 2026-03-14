@@ -51,11 +51,7 @@ func (r *pgDb) Create(ctx context.Context, t *transaction.Transaction) error {
 func (r *pgDb) List(ctx context.Context) ([]*transaction.TransactionWithDetails, error) {
 	var txModels []transactionModel
 
-	if err := r.db.WithContext(ctx).
-		Preload("Ticket").
-		Preload("Buyer").
-		Preload("Seller").
-		Find(&txModels).Error; err != nil {
+	if err := r.db.WithContext(ctx).Find(&txModels).Error; err != nil {
 		return nil, err
 	}
 
@@ -79,11 +75,31 @@ func (r *pgDb) List(ctx context.Context) ([]*transaction.TransactionWithDetails,
 func (r *pgDb) GetByID(ctx context.Context, id uint) (*transaction.TransactionWithDetails, error) {
 	var txModel transactionModel
 
-	err := r.db.WithContext(ctx).
-		Preload("Ticket").
-		Preload("Buyer").
-		Preload("Seller").
-		First(&txModel, id).Error
+	err := r.db.WithContext(ctx).First(&txModel, id).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("transaction not found")
+		}
+		return nil, err
+	}
+
+	return &transaction.TransactionWithDetails{
+		ID:        txModel.ID,
+		CreatedAt: txModel.CreatedAt,
+		UpdatedAt: txModel.UpdatedAt,
+		TicketID:  txModel.TicketID,
+		BuyerID:   txModel.BuyerID,
+		SellerID:  txModel.SellerID,
+		Status:    txModel.Status,
+	}, nil
+}
+
+// GetByTicketID gets a transaction by ticket ID
+func (r *pgDb) GetByTicketID(ctx context.Context, ticketID uint) (*transaction.TransactionWithDetails, error) {
+	var txModel transactionModel
+
+	err := r.db.WithContext(ctx).Where("ticket_id = ?", ticketID).First(&txModel).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -114,8 +130,6 @@ func (r *pgDb) ListByBuyerID(ctx context.Context, buyerID uint) ([]*transaction.
 
 	if err := r.db.WithContext(ctx).
 		Where("buyer_id = ?", buyerID).
-		Preload("Ticket").
-		Preload("Seller").
 		Find(&txModels).Error; err != nil {
 		return nil, err
 	}
@@ -142,8 +156,6 @@ func (r *pgDb) ListBySellerID(ctx context.Context, sellerID uint) ([]*transactio
 
 	if err := r.db.WithContext(ctx).
 		Where("seller_id = ?", sellerID).
-		Preload("Ticket").
-		Preload("Buyer").
 		Find(&txModels).Error; err != nil {
 		return nil, err
 	}

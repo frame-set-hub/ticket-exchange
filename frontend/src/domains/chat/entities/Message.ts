@@ -1,12 +1,15 @@
 export interface Message {
+  id: number;
   transaction_id: number;
   sender_id: number;
+  sender_username?: string;
   receiver_id: number;
   content: string;
+  attachment_url?: string;
+  created_at: string;
 }
 
 export interface SendMessageParams {
-  transaction_id: number;
   content: string;
-  receiver_id: number;
+  attachment_url?: string;
 }

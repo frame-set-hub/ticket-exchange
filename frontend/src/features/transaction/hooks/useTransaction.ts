@@ -4,28 +4,33 @@ import { getServices } from '../../../infrastructure/services/ServiceContainer';
 
 export function useEscrow(ticketId: number) {
   const [tx, setTx] = useState<Transaction | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { transactionRepository } = getServices();
 
   const initEscrow = useCallback(async () => {
     try {
-      const data = await transactionRepository.initiate(ticketId);
-      setTx(data);
+      setError(null);
+      // Try to find existing transaction for this ticket first
+      const existing = await transactionRepository.getByTicketId(ticketId);
+      setTx(existing);
     } catch {
-      // Transaction may already exist
+      // No existing transaction — try to create one (buyer flow)
+      try {
+        const data = await transactionRepository.initiate(ticketId);
+        setTx(data);
+      } catch (err: any) {
+        const msg = err.response?.data?.error || 'Failed to create transaction';
+        setError(msg);
+      }
     }
   }, [ticketId]);
 
   const uploadProof = async (userId: number) => {
     if (!tx) return;
-    try {
-      if (userId === tx.buyer_id) {
-        await transactionRepository.uploadPayment(tx.id);
-      } else if (userId === tx.seller_id) {
-        await transactionRepository.uploadTicket(tx.id);
-      }
-      alert('Uploaded successfully to Escrow!');
-    } catch {
-      console.error('Upload failed');
+    if (userId === tx.buyer_id) {
+      await transactionRepository.uploadPayment(tx.id);
+    } else if (userId === tx.seller_id) {
+      await transactionRepository.uploadTicket(tx.id);
     }
   };
 
@@ -33,7 +38,7 @@ export function useEscrow(ticketId: number) {
     initEscrow();
   }, [initEscrow]);
 
-  return { tx, uploadProof };
+  return { tx, error, uploadProof };
 }
 
 export function useAdminTransactions() {
@@ -50,12 +55,8 @@ export function useAdminTransactions() {
   }, []);
 
   const completeTransaction = async (txId: number) => {
-    try {
-      await transactionRepository.complete(txId);
-      fetchTransactions();
-    } catch {
-      alert('Verification failed or not ready.');
-    }
+    await transactionRepository.complete(txId);
+    fetchTransactions();
   };
 
   useEffect(() => {
