@@ -1,11 +1,5 @@
 import { create } from 'zustand';
-
-interface User {
-    id: number;
-    username: string;
-    email: string;
-    role: string;
-}
+import type { User } from '../domains/auth/entities/User';
 
 interface AuthState {
     user: User | null;

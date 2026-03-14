@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import api from '../api/axios';
+import React, { useState } from 'react';
+import { useTickets, useCreateTicket } from '../features/ticket/hooks/useTickets';
 import TicketCard from '../components/TicketCard';
 import { Search, Filter, RefreshCw } from 'lucide-react';
 
 export default function Home() {
-    const [tickets, setTickets] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { tickets, loading, fetchTickets } = useTickets();
+    const { createTicket, loading: isSelling } = useCreateTicket();
 
     // Filters
     const [title, setTitle] = useState('');
@@ -15,47 +15,26 @@ export default function Home() {
 
     // Sell Ticket Modal
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-    const [isSelling, setIsSelling] = useState(false);
     const [sellForm, setSellForm] = useState({ title: '', venue: '', price: '', category: 'Concert', description: '' });
 
     const handleSell = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSelling(true);
         try {
-            await api.post('/tickets', {
+            await createTicket({
                 ...sellForm,
-                price: parseFloat(sellForm.price)
+                price: parseFloat(sellForm.price),
             });
             setIsSellModalOpen(false);
             setSellForm({ title: '', venue: '', price: '', category: 'Concert', description: '' });
-            fetchTickets(); // Refresh list
-        } catch (err) {
-            console.error(err);
-            alert("Failed to create ticket.");
+            fetchTickets();
+        } catch {
+            alert('Failed to create ticket.');
         }
-        setIsSelling(false);
     };
 
-    const fetchTickets = async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (title) params.append('title', title);
-            if (category) params.append('category', category);
-            if (minPrice) params.append('min_price', minPrice);
-            if (maxPrice) params.append('max_price', maxPrice);
-
-            const { data } = await api.get(`/tickets?${params.toString()}`);
-            setTickets(data);
-        } catch (err) {
-            console.error(err);
-        }
-        setLoading(false);
+    const handleFilter = () => {
+        fetchTickets({ title, category, min_price: minPrice, max_price: maxPrice });
     };
-
-    useEffect(() => {
-        fetchTickets();
-    }, []);
 
     return (
         <div className="w-full animate-fade-in pt-10">
@@ -154,7 +133,7 @@ export default function Home() {
                     </div>
                 </div>
 
-                <button onClick={fetchTickets} className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors md:w-auto w-full">
+                <button onClick={handleFilter} className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors md:w-auto w-full">
                     <Filter className="w-4 h-4" /> Filter
                 </button>
             </div>
@@ -169,7 +148,7 @@ export default function Home() {
                         No tickets found securely match your criteria.
                     </div>
                 ) : (
-                    tickets.map((ticket: any) => <TicketCard key={ticket.id} ticket={ticket} />)
+                    tickets.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)
                 )}
             </div>
         </div>

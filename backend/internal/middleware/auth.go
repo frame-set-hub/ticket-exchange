@@ -39,8 +39,8 @@ func AuthRequired() gin.HandlerFunc {
 		}
 
 		// Set claims in context
-		c.Set("user_id", claims["user_id"])
-		c.Set("role", claims["role"])
+		c.Set("user_id", claims.UserID)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
