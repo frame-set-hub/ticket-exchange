@@ -1,25 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '../store/useStore';
-import api from '../api/axios';
+import { Link } from 'react-router-dom';
+import { useLogin } from '../features/auth/hooks/useLogin';
 import { LogIn } from 'lucide-react';
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const login = useAuthStore((state) => state.login);
-    const navigate = useNavigate();
+    const { handleLogin, error, loading } = useLogin();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            const { data } = await api.post('/auth/login', { username, password });
-            login(data.user, data.token);
-            navigate('/');
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Login failed');
-        }
+        await handleLogin(username, password);
     };
 
     return (
@@ -64,9 +55,10 @@ export default function Login() {
                     </div>
                     <button
                         type="submit"
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                        disabled={loading}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                        Sign In
+                        {loading ? 'Signing in...' : 'Sign In'}
                     </button>
                 </form>
 

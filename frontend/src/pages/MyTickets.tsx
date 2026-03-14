@@ -1,35 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import api from '../api/axios';
+import { useMyTickets } from '../features/ticket/hooks/useTickets';
 import { Ticket, Trash2, RefreshCw } from 'lucide-react';
 
 export default function MyTickets() {
-    const [tickets, setTickets] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchMyTickets = async () => {
-        setLoading(true);
-        try {
-            const { data } = await api.get('/tickets/my');
-            setTickets(data);
-        } catch (err) {
-            console.error(err);
-        }
-        setLoading(false);
-    };
-
-    const handleDelete = async (id: number) => {
-        if (!confirm("Are you sure you want to delete this ticket?")) return;
-        try {
-            await api.delete(`/tickets/${id}`);
-            fetchMyTickets(); // Refresh
-        } catch (err: any) {
-            alert(err.response?.data?.error || "Failed to delete ticket");
-        }
-    };
-
-    useEffect(() => {
-        fetchMyTickets();
-    }, []);
+    const { tickets, loading, deleteTicket } = useMyTickets();
 
     return (
         <div className="w-full animate-fade-in pt-10">
@@ -69,7 +42,7 @@ export default function MyTickets() {
                                 </td>
                             </tr>
                         ) : (
-                            tickets.map((t: any) => (
+                            tickets.map((t) => (
                                 <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
                                     <td className="p-4 font-mono text-slate-400 text-sm">#{t.id}</td>
                                     <td className="p-4 text-white font-medium">{t.title}</td>
@@ -88,7 +61,7 @@ export default function MyTickets() {
                                     <td className="p-4 text-right">
                                         {t.status === 'Available' ? (
                                             <button
-                                                onClick={() => handleDelete(t.id)}
+                                                onClick={() => deleteTicket(t.id)}
                                                 className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
                                                 title="Delete Ticket"
                                             >

@@ -1,18 +1,8 @@
-import React from 'react';
-import { MapPin, Tag } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { Ticket } from '../domains/ticket/entities/Ticket';
 
-interface TicketProps {
-    id: number;
-    title: string;
-    venue: string;
-    price: number;
-    category: string;
-    seller: { id: number; username: string };
-    status: string;
-}
-
-export default function TicketCard({ ticket }: { ticket: TicketProps }) {
+export default function TicketCard({ ticket }: { ticket: Ticket }) {
     const navigate = useNavigate();
 
     return (

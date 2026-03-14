@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '../api/axios';
+import { Link } from 'react-router-dom';
+import { useRegister } from '../features/auth/hooks/useRegister';
 import { UserPlus } from 'lucide-react';
 
 export default function Register() {
@@ -8,17 +8,11 @@ export default function Register() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('User');
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
+    const { handleRegister, error, loading } = useRegister();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            await api.post('/auth/register', { username, email, password, role });
-            navigate('/login');
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Registration failed');
-        }
+        await handleRegister(username, email, password, role);
     };
 
     return (
@@ -85,9 +79,10 @@ export default function Register() {
                     </div>
                     <button
                         type="submit"
-                        className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-lg transition-colors mt-2"
+                        disabled={loading}
+                        className="w-full bg-violet-600 hover:bg-violet-500 text-white font-medium py-3 rounded-lg transition-colors mt-2 disabled:opacity-50"
                     >
-                        Sign Up
+                        {loading ? 'Creating...' : 'Sign Up'}
                     </button>
                 </form>
 

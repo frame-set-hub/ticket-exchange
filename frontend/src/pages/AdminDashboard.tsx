@@ -1,33 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import api from '../api/axios';
+import { useAdminTransactions } from '../features/transaction/hooks/useTransaction';
 import { ShieldCheck, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
-    const [transactions, setTransactions] = useState([]);
+    const { transactions, completeTransaction } = useAdminTransactions();
     const navigate = useNavigate();
-
-    const fetchTxs = async () => {
-        try {
-            const { data } = await api.get('/admin/transactions');
-            setTransactions(data);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    useEffect(() => {
-        fetchTxs();
-    }, []);
-
-    const handleComplete = async (txId: number) => {
-        try {
-            await api.post(`/admin/transactions/${txId}/complete`);
-            fetchTxs(); // refresh
-        } catch (err) {
-            alert("Verification failed or not ready.");
-        }
-    };
 
     return (
         <div className="w-full animate-fade-in pt-10">
@@ -51,7 +28,7 @@ export default function AdminDashboard() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/50">
-                        {transactions.map((tx: any) => (
+                        {transactions.map((tx) => (
                             <tr key={tx.id} className="hover:bg-slate-800/20 transition-colors">
                                 <td className="px-6 py-4 font-mono text-slate-500">#{tx.id}</td>
                                 <td className="px-6 py-4 font-medium text-white">{tx.ticket?.title}</td>
@@ -83,7 +60,7 @@ export default function AdminDashboard() {
                                         </button>
                                         {tx.status === 'Verifying' && (
                                             <button
-                                                onClick={() => handleComplete(tx.id)}
+                                                onClick={() => completeTransaction(tx.id)}
                                                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors"
                                             >
                                                 <CheckCircle className="w-4 h-4" /> Finalize

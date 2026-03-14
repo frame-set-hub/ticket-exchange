@@ -1,79 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useStore';
-import api from '../api/axios';
+import { useEscrow } from '../features/transaction/hooks/useTransaction';
+import { useChat } from '../features/chat/hooks/useChat';
 import { Send, Upload, FileCheck, Shield, Lock } from 'lucide-react';
 
 export default function Transaction() {
-    const { id } = useParams(); // Ticket ID or TX ID based on flow
+    const { id } = useParams();
     const { user, token } = useAuthStore();
 
-    const [tx, setTx] = useState<any>(null);
-    const [messages, setMessages] = useState<any[]>([]);
+    const { tx, uploadProof } = useEscrow(Number(id));
+    const { messages, sendMessage } = useChat(token, tx?.id);
     const [inputMsg, setInputMsg] = useState('');
-    const ws = useRef<WebSocket | null>(null);
 
-    const initEscrow = async () => {
-        try {
-            // 1. First attempt to fetch tx by ticket ID (buyer initiates)
-            const { data } = await api.post(`/transactions/${id}`);
-            setTx(data);
-        } catch (err: any) {
-            // 2. If it fails, maybe it already exists or we are loading directly by tx ID
-            if (err.response?.status === 400 && err.response?.data?.error === 'Ticket is not available') {
-                // Mock fallback to get tx for POC natively would require another endpoint.
-                // Assuming we have TX ID here.
-            }
-        }
-    };
-
-    const connectWS = () => {
-        if (!token) return;
-        const socket = new WebSocket(`ws://localhost:8080/api/chat?token=${token}`);
-        socket.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.transaction_id === tx?.id) {
-                setMessages((prev) => [...prev, msg]);
-            }
-        };
-        ws.current = socket;
-    };
-
-    useEffect(() => {
-        initEscrow();
-        return () => ws.current?.close();
-    }, []);
-
-    useEffect(() => {
-        if (tx) connectWS();
-    }, [tx]);
-
-    const sendMessage = (e: React.FormEvent) => {
+    const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!ws.current || !inputMsg) return;
-
-        // Send to admin (for POC we assume receiver_id is Admin globally or hardcoded)
-        ws.current.send(JSON.stringify({
-            transaction_id: tx?.id,
-            content: inputMsg,
-            receiver_id: 1, // Mock admin ID
-        }));
+        if (!inputMsg) return;
+        sendMessage(inputMsg, 1); // Mock admin ID
         setInputMsg('');
-    };
-
-    const handleUploadProof = async () => {
-        if (!tx) return;
-        try {
-            if (user?.id === tx.buyer_id) {
-                await api.post(`/transactions/${tx.id}/upload-payment`);
-            } else if (user?.id === tx.seller_id) {
-                await api.post(`/transactions/${tx.id}/upload-ticket`);
-            }
-            alert("Uploaded successfully to Escrow!");
-            // Reload tx logic here
-        } catch (err) {
-            console.error("Upload failed");
-        }
     };
 
     if (!tx) return <div className="pt-20 text-center text-slate-400">Loading Secure Escrow...</div>;
@@ -99,7 +43,7 @@ export default function Transaction() {
                     </div>
 
                     <button
-                        onClick={handleUploadProof}
+                        onClick={() => user && uploadProof(user.id)}
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
                     >
                         {user?.id === tx.seller_id ? <><Upload className="w-4 h-4" /> Upload Digital Ticket</> : <><FileCheck className="w-4 h-4" /> Upload Payment Proof</>}
@@ -126,7 +70,7 @@ export default function Transaction() {
                     ))}
                 </div>
 
-                <form onSubmit={sendMessage} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+                <form onSubmit={handleSend} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
                     <input
                         type="text" value={inputMsg} onChange={e => setInputMsg(e.target.value)}
                         placeholder="Message the Admin..."
