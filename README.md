@@ -14,19 +14,34 @@
 
 ---
 
+## Table of Contents
+
+- [User Interface](#user-interface)
+- [Core Mechanism — Escrow Flow](#core-mechanism--escrow-flow)
+- [Real-Time Chat — WebSocket Architecture](#real-time-chat--websocket-architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Architecture Overview](#architecture-overview)
+- [Backend Architecture (Go)](#backend-architecture-go)
+- [Frontend Architecture (React)](#frontend-architecture-react)
+- [API Endpoints](#api-endpoints)
+- [Security Considerations](#security-considerations)
+
+---
+
 ## User Interface
 
 | Marketplace (Admin) | Marketplace (User) |
 |:-------------------:|:------------------:|
 | ![Marketplace Admin](docs/screenshots/marketplace.png) | ![Marketplace User](docs/screenshots/marketplace-user.png) |
 
-| Escrow Chat (WebSocket) | Admin Dashboard |
-|:-----------------------:|:---------------:|
-| ![Escrow Chat](docs/screenshots/escrow-chat.png) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) |
+| Escrow — Admin View | Escrow — Buyer View |
+|:--------------------:|:-------------------:|
+| ![Escrow Admin](docs/screenshots/escrow-chat.png) | ![Escrow Buyer](docs/screenshots/escrow-buyer.png) |
 
-| My Tickets |
-|:----------:|
-| ![My Tickets](docs/screenshots/my-tickets.png) |
+| Admin Dashboard | My Tickets |
+|:---------------:|:----------:|
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![My Tickets](docs/screenshots/my-tickets.png) |
 
 ---
 
@@ -92,6 +107,73 @@ sequenceDiagram
 - **History via REST** — `GET /api/chat/transactions/:tx_id/messages` loads past messages on page load
 - **New messages via WS** — sent through WebSocket, persisted to DB, then broadcast to all room participants
 - **Auth** — JWT token passed as query param on WS upgrade (browsers can't set headers on WebSocket)
+
+### Deep Dive — WebSocket Group Chat (Hub & Room)
+
+Every escrow transaction creates a **shared chat room** where Buyer, Seller, and Admin all see the same messages in real-time. This is a group chat, not 1-on-1.
+
+```mermaid
+graph TB
+    subgraph "WebSocket Hub (Server)"
+        Hub["Hub<br/><i>Manages all rooms</i>"]
+
+        subgraph "Room: tx:1"
+            C1["Client — Buyer"]
+            C2["Client — Seller"]
+            C3["Client — Admin"]
+        end
+
+        subgraph "Room: tx:2"
+            C4["Client — Buyer"]
+            C5["Client — Admin"]
+        end
+    end
+
+    Hub -->|register/unregister| C1
+    Hub -->|broadcast| C1
+    Hub -->|broadcast| C2
+    Hub -->|broadcast| C3
+
+    style Hub fill:#1e3a5f,stroke:#3b82f6,color:#dbeafe
+    style C1 fill:#065f46,stroke:#10b981,color:#d1fae5
+    style C2 fill:#78350f,stroke:#f59e0b,color:#fef3c7
+    style C3 fill:#7f1d1d,stroke:#ef4444,color:#fee2e2
+    style C4 fill:#065f46,stroke:#10b981,color:#d1fae5
+    style C5 fill:#7f1d1d,stroke:#ef4444,color:#fee2e2
+```
+
+**How it works internally:**
+
+```
+handler_ws.go                         ws_hub.go
+─────────────                         ─────────
+1. GET /api/chat/ws/:tx_id?token=JWT
+2. Validate JWT (buyer/seller/admin?)
+3. Upgrade HTTP → WebSocket
+4. Create Client{roomID: "tx:1"}
+5. hub.register <- client              → Hub adds client to rooms["tx:1"]
+6. go client.readPump()               → Reads JSON from WS connection
+7. go client.writePump()              → Writes from send channel to WS
+
+   readPump receives message:
+8. useCase.CreateMessage() → DB
+9. hub.broadcast <- {room, data}       → Hub iterates rooms["tx:1"]
+                                       → Sends to ALL clients in room
+                                       → Buyer, Seller, Admin all receive it
+```
+
+| Component | Responsibility |
+|-----------|---------------|
+| **Hub** | Central coordinator. Runs in its own goroutine. Manages `register`, `unregister`, `broadcast` channels |
+| **Room** (`map[string]map[*Client]bool`) | Each transaction gets a room keyed by `tx:<id>`. All 3 participants share one room |
+| **Client** | Holds a `*websocket.Conn`, a `send` channel, `roomID`, and `userID` |
+| **readPump** | Per-client goroutine. Reads messages from browser → persists to DB → triggers broadcast |
+| **writePump** | Per-client goroutine. Drains `send` channel → writes to browser. Handles ping/pong keepalive |
+
+**Why group chat instead of private channels?**
+- Escrow requires **transparency** — all 3 parties (Buyer, Seller, Admin) should see the same conversation
+- Admin can mediate disputes by seeing the full context
+- Reduces complexity — one room per transaction instead of 3 separate channels
 
 ---
 
