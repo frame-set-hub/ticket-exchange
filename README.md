@@ -14,23 +14,19 @@
 
 ---
 
-## Screenshots
+## User Interface
 
-> Add your own screenshots here! Run the app and capture the UI.
+| Marketplace (Admin) | Marketplace (User) |
+|:-------------------:|:------------------:|
+| ![Marketplace Admin](docs/screenshots/marketplace.png) | ![Marketplace User](docs/screenshots/marketplace-user.png) |
 
-| Marketplace | Escrow Transaction | Admin Dashboard |
-|:-----------:|:------------------:|:---------------:|
-| ![Marketplace](docs/screenshots/marketplace.png) | ![Transaction](docs/screenshots/transaction.png) | ![Admin](docs/screenshots/admin.png) |
+| Escrow Chat (WebSocket) | Admin Dashboard |
+|:-----------------------:|:---------------:|
+| ![Escrow Chat](docs/screenshots/escrow-chat.png) | ![Admin Dashboard](docs/screenshots/admin-dashboard.png) |
 
-<details>
-<summary>📸 How to add screenshots</summary>
-
-1. Create a `docs/screenshots/` folder
-2. Take screenshots of each page
-3. Save them as `marketplace.png`, `transaction.png`, `admin.png`
-4. They will automatically appear in this table
-
-</details>
+| My Tickets |
+|:----------:|
+| ![My Tickets](docs/screenshots/my-tickets.png) |
 
 ---
 
