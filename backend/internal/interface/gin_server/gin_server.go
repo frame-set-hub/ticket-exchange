@@ -21,6 +21,7 @@ type GinServer struct {
 	useCase  *use_case.UseCase
 	config   *ServerConfig
 	router   *gin.Engine
+	hub      *Hub
 }
 
 // New creates a new GinServer instance
@@ -46,10 +47,14 @@ func New(useCase *use_case.UseCase, config *ServerConfig) *GinServer {
 		c.Next()
 	})
 
+	hub := NewHub()
+	go hub.Run()
+
 	return &GinServer{
 		useCase:  useCase,
 		config:   config,
 		router:   router,
+		hub:      hub,
 	}
 }
 
@@ -102,6 +107,9 @@ func (s *GinServer) SetupRoutes() {
 			admin.POST("/transactions/:id/status", s.AdminUpdateTransactionStatus)
 		}
 	}
+
+	// WebSocket chat (auth via query param)
+	s.router.GET("/api/chat/ws/:transaction_id", s.HandleWebSocket)
 
 	// Health check
 	s.router.GET("/health", func(c *gin.Context) {

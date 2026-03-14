@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useStore';
 import { useEscrow } from '../features/transaction/hooks/useTransaction';
@@ -16,6 +16,7 @@ export default function Transaction() {
     const { messages, sendMessage } = useChat(token, tx?.id);
     const [inputMsg, setInputMsg] = useState('');
 
+    const chatEndRef = useRef<HTMLDivElement>(null);
     const isAdmin = user?.role === 'Admin';
     const isSeller = user?.id === tx?.seller_id;
     const isBuyer = user?.id === tx?.buyer_id;
@@ -23,7 +24,7 @@ export default function Transaction() {
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputMsg) return;
-        sendMessage(inputMsg, 1);
+        sendMessage(inputMsg);
         setInputMsg('');
     };
 
@@ -36,6 +37,11 @@ export default function Transaction() {
             toast('error', 'Upload Failed', 'Something went wrong. Please try again.');
         }
     };
+
+    // Auto-scroll on new messages
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     if (error) return <ErrorModal message={error} />;
     if (!tx) return <div className="pt-20 text-center text-slate-400">Loading Secure Escrow...</div>;
@@ -95,13 +101,26 @@ export default function Transaction() {
                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                     <div className="text-center text-xs text-slate-500 my-4">Conversation started. Messages are end-to-end encrypted with Admin.</div>
 
-                    {messages.map((m, i) => (
-                        <div key={i} className={`flex flex-col ${m.sender_id === user?.id ? 'items-end' : 'items-start'}`}>
-                            <div className={`max-w-[75%] px-4 py-2 rounded-2xl ${m.sender_id === user?.id ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-slate-800 text-slate-200 rounded-tl-sm'}`}>
-                                {m.content}
+                    {messages.map((m) => {
+                        const isMe = m.sender_id === user?.id;
+                        const name = isMe ? 'You' : (m.sender_username || `User #${m.sender_id}`);
+                        return (
+                            <div key={m.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                                <span className={`text-[10px] font-medium mb-1 px-1 ${isMe ? 'text-blue-400' : 'text-slate-500'}`}>
+                                    {name}
+                                </span>
+                                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-slate-800 text-slate-200 rounded-tl-sm'}`}>
+                                    <p>{m.content}</p>
+                                    {m.created_at && m.created_at !== '0001-01-01T00:00:00Z' && (
+                                        <p className={`text-[10px] mt-1 ${isMe ? 'text-blue-200/60' : 'text-slate-500'}`}>
+                                            {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
+                    <div ref={chatEndRef} />
                 </div>
 
                 <form onSubmit={handleSend} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">

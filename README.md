@@ -62,6 +62,43 @@ sequenceDiagram
 
 ---
 
+## Real-Time Chat — WebSocket Architecture
+
+Each escrow transaction has a private chat room. Communication flows through WebSocket for real-time delivery, with REST fallback for message history.
+
+```mermaid
+sequenceDiagram
+    actor User as Buyer / Seller
+    participant FE as React Frontend
+    participant WS as WebSocket Server
+    participant DB as PostgreSQL
+
+    Note over FE,DB: 📡 Connection Phase
+    FE->>WS: GET /api/chat/ws/:tx_id?token=JWT
+    WS->>WS: Validate JWT + check buyer/seller/admin
+    WS-->>FE: 101 Switching Protocols
+    FE->>FE: GET /api/chat/transactions/:tx_id/messages (REST)
+    FE->>FE: Render chat history
+
+    Note over FE,DB: 💬 Real-Time Messaging
+    User->>FE: Type & send message
+    FE->>WS: ws.send({content: "..."})
+    WS->>DB: INSERT INTO message_models
+    WS->>WS: Broadcast to all clients in room
+    WS-->>FE: onmessage → render instantly
+
+    Note over FE,DB: 🔐 Security
+    Note right of WS: Only buyer, seller, and admin<br/>can join the room
+```
+
+**Key Design:**
+- **Hub pattern** — one Hub manages all rooms (`tx:<id>`), rooms are created/destroyed lazily
+- **History via REST** — `GET /api/chat/transactions/:tx_id/messages` loads past messages on page load
+- **New messages via WS** — sent through WebSocket, persisted to DB, then broadcast to all room participants
+- **Auth** — JWT token passed as query param on WS upgrade (browsers can't set headers on WebSocket)
+
+---
+
 ## Tech Stack
 
 ```mermaid
@@ -312,6 +349,7 @@ graph LR
         TX3["POST /transactions/:id/status"]
         C1["GET /chat/transactions/:id/messages"]
         C2["POST /chat/transactions/:id/messages"]
+        C3["🔌 WS /chat/ws/:id?token=JWT"]
     end
 
     subgraph Admin Only
