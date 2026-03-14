@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from './store/useStore';
+import { ToastProvider } from './components/Toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
@@ -22,9 +23,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <a href="/" className="text-slate-300 hover:text-white transition-colors">Marketplace</a>
-            {user && <a href="/my-tickets" className="text-slate-300 hover:text-white transition-colors">My Tickets</a>}
-            {user?.role === 'Admin' && <a href="/admin" className="text-slate-300 hover:text-white transition-colors">Dashboard</a>}
+            <Link to="/" className="text-slate-300 hover:text-white transition-colors">Marketplace</Link>
+            {user && <Link to="/my-tickets" className="text-slate-300 hover:text-white transition-colors">My Tickets</Link>}
+            {user?.role === 'Admin' && <Link to="/admin" className="text-slate-300 hover:text-white transition-colors">Dashboard</Link>}
           </div>
 
           {user ? (
@@ -39,8 +40,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           ) : (
             <div className="space-x-3">
-              <a href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Log In</a>
-              <a href="/register" className="text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors">Sign Up</a>
+              <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors">Log In</Link>
+              <Link to="/register" className="text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors">Sign Up</Link>
             </div>
           )}
         </div>
@@ -62,6 +63,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
 
 export default function App() {
   return (
+    <ToastProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -73,5 +75,6 @@ export default function App() {
         <Route path="/admin" element={<Layout><ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute></Layout>} />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }

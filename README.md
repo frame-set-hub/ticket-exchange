@@ -93,11 +93,21 @@ graph LR
 
 ### 1. Database (Docker)
 ```bash
+# Option A: Quick start (hardcoded values)
 docker run --name ticketx-postgres \
   -e POSTGRES_USER=ticketx_user \
   -e POSTGRES_PASSWORD=secret_password \
   -e POSTGRES_DB=ticketx_db \
   -p 5432:5432 -d postgres:alpine
+
+# Option B: Load from .env (recommended — single source of truth)
+cd backend && cp .env.example .env   # edit .env if needed
+source .env
+docker run --name ticketx-postgres \
+  -e POSTGRES_USER=$DB_USER \
+  -e POSTGRES_PASSWORD=$DB_PASSWORD \
+  -e POSTGRES_DB=$DB_NAME \
+  -p $DB_PORT:5432 -d postgres:alpine
 ```
 
 ### 2. Backend
@@ -297,15 +307,16 @@ graph LR
         T2["GET /tickets/my"]
         T3["POST /tickets"]
         T4["DELETE /tickets/:id"]
-        TX1["POST /transactions/:id"]
-        TX2["POST /transactions/:id/upload-payment"]
-        TX3["POST /transactions/:id/upload-ticket"]
-        C1["WS /chat?token=..."]
+        TX1["POST /transactions"]
+        TX2["GET /transactions/my"]
+        TX3["POST /transactions/:id/status"]
+        C1["GET /chat/transactions/:id/messages"]
+        C2["POST /chat/transactions/:id/messages"]
     end
 
     subgraph Admin Only
         AD1["GET /admin/transactions"]
-        AD2["POST /admin/transactions/:id/complete"]
+        AD2["POST /admin/transactions/:id/status"]
     end
 
     style Public fill:#065f46,stroke:#10b981,color:#d1fae5

@@ -41,6 +41,12 @@ func (s *GinServer) CreateTransaction(c *gin.Context) {
 		return
 	}
 
+	// Prevent buying own ticket
+	if ticketResult.Ticket.SellerID == user.ID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot buy your own ticket"})
+		return
+	}
+
 	result, err := s.useCase.CreateTransaction(c.Request.Context(), &use_case.CreateTransactionParams{
 		TicketID: req.TicketID,
 		BuyerID:  user.ID,
@@ -52,6 +58,37 @@ func (s *GinServer) CreateTransaction(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, result.Transaction)
+}
+
+// GetTransactionByTicketID handles getting a transaction by ticket ID
+func (s *GinServer) GetTransactionByTicketID(c *gin.Context) {
+	user := middleware.GetCurrentUser(c)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	ticketIDStr := c.Param("ticket_id")
+	ticketID, err := strconv.ParseUint(ticketIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		return
+	}
+
+	result, err := s.useCase.GetTransactionByTicketID(c.Request.Context(), uint(ticketID))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Only buyer, seller, or admin can view
+	tx := result.Transaction
+	if tx.BuyerID != user.ID && tx.SellerID != user.ID && user.Role != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	c.JSON(http.StatusOK, tx)
 }
 
 // ListTransactions handles listing all transactions (admin only)

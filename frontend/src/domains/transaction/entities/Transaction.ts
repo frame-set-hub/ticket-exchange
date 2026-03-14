@@ -12,4 +12,4 @@ export interface Transaction {
   seller?: User;
 }
 
-export type TransactionStatus = 'Pending' | 'Waiting_Payment' | 'Verifying' | 'Completed';
+export type TransactionStatus = 'Waiting_Ticket' | 'Waiting_Payment' | 'Verifying' | 'Completed' | 'Cancelled';

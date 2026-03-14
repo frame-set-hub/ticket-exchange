@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useTickets, useCreateTicket } from '../features/ticket/hooks/useTickets';
 import TicketCard from '../components/TicketCard';
 import { Search, Filter, RefreshCw } from 'lucide-react';
+import { useToast } from '../components/Toast';
 
 export default function Home() {
     const { tickets, loading, fetchTickets } = useTickets();
     const { createTicket, loading: isSelling } = useCreateTicket();
+    const { toast } = useToast();
 
     // Filters
     const [title, setTitle] = useState('');
@@ -27,8 +29,9 @@ export default function Home() {
             setIsSellModalOpen(false);
             setSellForm({ title: '', venue: '', price: '', category: 'Concert', description: '' });
             fetchTickets();
+            toast('success', 'Ticket Listed!', 'Your ticket is now live on the marketplace.');
         } catch {
-            alert('Failed to create ticket.');
+            toast('error', 'Listing Failed', 'Could not create your ticket. Please try again.');
         }
     };
 

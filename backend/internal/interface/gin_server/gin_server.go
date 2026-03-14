@@ -31,14 +31,10 @@ func New(useCase *use_case.UseCase, config *ServerConfig) *GinServer {
 	}
 
 	router := gin.Default()
+	router.RedirectTrailingSlash = false
+	router.RedirectFixedPath = false
 
-	// Middleware
-	router.Use(gin.Recovery())
-	if config.RequestLog {
-		router.Use(gin.Logger())
-	}
-
-	// CORS
+	// CORS — must be before any other middleware
 	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
@@ -73,8 +69,8 @@ func (s *GinServer) SetupRoutes() {
 		// Ticket routes
 		tickets := protected.Group("/tickets")
 		{
-			tickets.POST("/", s.CreateTicket)
-			tickets.GET("/", s.GetTickets)
+			tickets.POST("", s.CreateTicket)
+			tickets.GET("", s.GetTickets)
 			tickets.GET("/my", s.GetMyTickets)
 			tickets.GET("/:id", s.GetTicketByID)
 			tickets.DELETE("/:id", s.DeleteTicket)
@@ -83,9 +79,10 @@ func (s *GinServer) SetupRoutes() {
 		// Transaction routes
 		transactions := protected.Group("/transactions")
 		{
-			transactions.POST("/", s.CreateTransaction)
-			transactions.GET("/", s.ListTransactions)
+			transactions.POST("", s.CreateTransaction)
+			transactions.GET("", s.ListTransactions)
 			transactions.GET("/my", s.ListMyTransactions)
+			transactions.GET("/by-ticket/:ticket_id", s.GetTransactionByTicketID)
 			transactions.GET("/:id", s.GetTransactionByID)
 			transactions.POST("/:id/status", s.UpdateTransactionStatus)
 		}

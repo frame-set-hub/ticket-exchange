@@ -3,24 +3,44 @@ import { useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/useStore';
 import { useEscrow } from '../features/transaction/hooks/useTransaction';
 import { useChat } from '../features/chat/hooks/useChat';
-import { Send, Upload, FileCheck, Shield, Lock } from 'lucide-react';
+import { Send, Upload, FileCheck, Shield, Lock, ShieldCheck } from 'lucide-react';
+import ErrorModal from '../components/ErrorModal';
+import { useToast } from '../components/Toast';
 
 export default function Transaction() {
     const { id } = useParams();
     const { user, token } = useAuthStore();
+    const { toast } = useToast();
 
-    const { tx, uploadProof } = useEscrow(Number(id));
+    const { tx, error, uploadProof } = useEscrow(Number(id));
     const { messages, sendMessage } = useChat(token, tx?.id);
     const [inputMsg, setInputMsg] = useState('');
+
+    const isAdmin = user?.role === 'Admin';
+    const isSeller = user?.id === tx?.seller_id;
+    const isBuyer = user?.id === tx?.buyer_id;
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputMsg) return;
-        sendMessage(inputMsg, 1); // Mock admin ID
+        sendMessage(inputMsg, 1);
         setInputMsg('');
     };
 
+    const handleUpload = async () => {
+        if (!user) return;
+        try {
+            await uploadProof(user.id);
+            toast('success', 'Uploaded!', 'Your proof has been submitted to escrow.');
+        } catch {
+            toast('error', 'Upload Failed', 'Something went wrong. Please try again.');
+        }
+    };
+
+    if (error) return <ErrorModal message={error} />;
     if (!tx) return <div className="pt-20 text-center text-slate-400">Loading Secure Escrow...</div>;
+
+    const roleLabel = isAdmin ? 'Admin (Escrow Agent)' : isSeller ? 'Seller' : 'Buyer';
 
     return (
         <div className="pt-8 h-[calc(100vh-80px)] flex flex-col md:flex-row gap-6">
@@ -29,7 +49,10 @@ export default function Transaction() {
                 <div className="glass-panel p-6 rounded-2xl border-emerald-500/30">
                     <div className="flex items-center gap-3 mb-4">
                         <Lock className="w-8 h-8 text-emerald-500" />
-                        <h2 className="text-2xl font-bold text-white">Escrow Hold</h2>
+                        <div>
+                            <h2 className="text-2xl font-bold text-white">Escrow Hold</h2>
+                            <span className="text-xs text-slate-500">You are: <span className="text-slate-300 font-medium">{roleLabel}</span></span>
+                        </div>
                     </div>
                     <p className="text-slate-400 text-sm mb-6">
                         Your transaction is guarded. Funds and tickets are held by the Admin until both parties fulfill their obligations.
@@ -42,12 +65,23 @@ export default function Transaction() {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => user && uploadProof(user.id)}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
-                    >
-                        {user?.id === tx.seller_id ? <><Upload className="w-4 h-4" /> Upload Digital Ticket</> : <><FileCheck className="w-4 h-4" /> Upload Payment Proof</>}
-                    </button>
+                    {/* Role-specific actions */}
+                    {isAdmin ? (
+                        <div className="flex items-center gap-2 text-sm text-slate-400 bg-slate-900/60 rounded-lg p-3 border border-slate-700/50">
+                            <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
+                            <span>You are overseeing this escrow as Admin. Manage from <span className="text-blue-400">Dashboard</span>.</span>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleUpload}
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
+                        >
+                            {isSeller
+                                ? <><Upload className="w-4 h-4" /> Upload Digital Ticket</>
+                                : <><FileCheck className="w-4 h-4" /> Upload Payment Proof</>
+                            }
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -73,7 +107,7 @@ export default function Transaction() {
                 <form onSubmit={handleSend} className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
                     <input
                         type="text" value={inputMsg} onChange={e => setInputMsg(e.target.value)}
-                        placeholder="Message the Admin..."
+                        placeholder={isAdmin ? "Message as Admin..." : "Message the Admin..."}
                         className="flex-1 bg-slate-800 border-none rounded-xl px-4 text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl transition-colors">

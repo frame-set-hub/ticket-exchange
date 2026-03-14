@@ -59,6 +59,18 @@ func (u *UseCase) CreateTransaction(ctx context.Context, p *CreateTransactionPar
 	}, nil
 }
 
+// GetTransactionByTicketID gets a transaction by ticket ID
+func (u *UseCase) GetTransactionByTicketID(ctx context.Context, ticketID uint) (*GetTransactionByIDResult, error) {
+	txEntity, err := u.transactionRepository.GetByTicketID(ctx, ticketID)
+	if err != nil {
+		return nil, errors.New("transaction not found")
+	}
+
+	return &GetTransactionByIDResult{
+		Transaction: txEntity,
+	}, nil
+}
+
 // ListTransactions lists all transactions (admin only)
 func (u *UseCase) ListTransactions(ctx context.Context) (*ListTransactionsResult, error) {
 	transactions, err := u.transactionRepository.List(ctx)
